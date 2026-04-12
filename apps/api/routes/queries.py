@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import math
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
@@ -15,9 +15,7 @@ from config import settings
 from db.audit import audit_from_request
 from db.client import get_supabase
 from db.redis import get_query_count, increment_query_counter
-
-if TYPE_CHECKING:
-    from models.schemas import QueryCreate
+from models.schemas import QueryCreate  # noqa: TC001 — needed at runtime for FastAPI
 
 logger = structlog.get_logger()
 
@@ -209,8 +207,6 @@ async def stream_query(query_id: str, request: Request):
 
     async def event_generator():
         """Poll query status and stream events."""
-        import json
-
         last_status = None
         poll_count = 0
         max_polls = 60  # 60 * 0.5s = 30s max

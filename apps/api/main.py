@@ -48,11 +48,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Firebase Auth middleware — verifies JWT, attaches tenant/user to request
-# Only enabled when Supabase is configured (otherwise runs in dev/stub mode)
-if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
-    from middleware.auth import FirebaseAuthMiddleware
-    app.add_middleware(FirebaseAuthMiddleware)
+# Auth middleware — always active. Uses Firebase tokens if available,
+# falls back to demo tenant/user for unauthenticated requests.
+from middleware.auth import FirebaseAuthMiddleware  # noqa: E402
+
+app.add_middleware(FirebaseAuthMiddleware)
 
 
 @app.middleware("http")

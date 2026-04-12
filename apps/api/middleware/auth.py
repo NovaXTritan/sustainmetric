@@ -1,9 +1,8 @@
-"""Auth middleware — verifies tokens and attaches user context.
+"""Auth middleware — verifies tokens or falls back to demo mode.
 
-Currently operates in two modes:
-- Firebase Auth mode: when Firebase Admin SDK can initialize
-- Passthrough mode: when Firebase is not configured, allows
-  unauthenticated access with no tenant context (for demo/dev)
+Production: Firebase ID tokens verified, user/tenant from DB.
+Demo mode: No token required, requests use the pre-seeded demo
+tenant and user so judges can use the app without signing up.
 """
 
 from __future__ import annotations
@@ -23,12 +22,23 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
+# Pre-seeded demo tenant/user IDs (from migration seed)
+DEMO_TENANT_ID = "00000000-0000-0000-0000-000000000001"
+DEMO_USER_ID = "00000000-0000-0000-0000-000000000002"
+
 _firebase_initialized = False
 _firebase_available = False
 
+PUBLIC_PATHS = {
+    "/api/v1/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+}
 
-def _ensure_firebase_init() -> bool:
-    """Initialize Firebase Admin SDK once. Returns True if successful."""
+
+def _try_firebase_init() -> bool:
+    """Try to initialize Firebase Admin SDK. Returns True if successful."""
     global _firebase_initialized, _firebase_available
     if _firebase_initialized:
         return _firebase_available
@@ -39,35 +49,18 @@ def _ensure_firebase_init() -> bool:
             firebase_admin.initialize_app()
         _firebase_available = True
     except Exception as e:
-        logger.warning(
-            "firebase_admin_init_failed",
-            error=str(e),
-            hint="Running in passthrough auth mode",
-        )
+        logger.info("firebase_not_available", error=str(e))
         _firebase_available = False
     return _firebase_available
 
 
-def _verify_token(token: str) -> dict:
-    """Verify a Firebase ID token and return decoded claims."""
-    from firebase_admin import auth  # type: ignore[import-untyped]
-    return auth.verify_id_token(token)
-
-
-PUBLIC_PATHS = {
-    "/api/v1/health",
-    "/docs",
-    "/openapi.json",
-    "/redoc",
-}
-
-
 class FirebaseAuthMiddleware(BaseHTTPMiddleware):
-    """Verify Firebase ID token on every request except public paths.
+    """Auth middleware with automatic demo fallback.
 
-    Note: uses JSONResponse instead of HTTPException because
-    Starlette BaseHTTPMiddleware doesn't propagate HTTPException
-    to FastAPI's exception handlers properly.
+    If a Bearer token is present and Firebase is configured,
+    verifies the token and loads the real user.
+    Otherwise, assigns the demo tenant/user so the full
+    pipeline works without authentication.
     """
 
     async def dispatch(
@@ -78,20 +71,18 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS or request.method == "OPTIONS":
             return await call_next(request)
 
-        firebase_ok = _ensure_firebase_init()
-
         auth_header = request.headers.get("authorization", "")
         has_token = auth_header.startswith("Bearer ")
+        firebase_ok = _try_firebase_init()
 
         if has_token and firebase_ok:
+            # Real auth flow
             token = auth_header.split("Bearer ", 1)[1]
             try:
-                decoded = _verify_token(token)
+                from firebase_admin import auth  # type: ignore[import-untyped]
+                decoded = auth.verify_id_token(token)
             except Exception as e:
-                logger.warning(
-                    "firebase_token_verification_failed",
-                    error=str(e),
-                )
+                logger.warning("token_verify_failed", error=str(e))
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "Invalid or expired token"},
@@ -101,35 +92,25 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
             email: str = decoded.get("email", "")
 
             try:
-                user_row, tenant_row = await _get_or_create_user(
+                user_row, _ = await _get_or_create_user(
                     firebase_uid, email,
                 )
+                request.state.tenant_id = user_row["tenant_id"]
+                request.state.user_id = user_row["id"]
+                request.state.email = email
+                request.state.role = user_row["role"]
             except Exception:
-                logger.exception(
-                    "user_lookup_failed",
-                    firebase_uid=firebase_uid,
-                )
+                logger.exception("user_provision_failed")
                 return JSONResponse(
                     status_code=500,
                     content={"detail": "User provisioning failed"},
                 )
-
-            request.state.tenant_id = user_row["tenant_id"]
-            request.state.user_id = user_row["id"]
-            request.state.firebase_uid = firebase_uid
-            request.state.email = email
-            request.state.role = user_row["role"]
-
-        elif not firebase_ok:
-            # Passthrough — no auth available
-            logger.debug("auth_passthrough", path=path)
-
         else:
-            # Firebase configured but no token
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Missing Authorization header"},
-            )
+            # Demo mode — assign pre-seeded demo tenant/user
+            request.state.tenant_id = DEMO_TENANT_ID
+            request.state.user_id = DEMO_USER_ID
+            request.state.email = "demo@sustainmetric.app"
+            request.state.role = "admin"
 
         return await call_next(request)
 
@@ -137,11 +118,10 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
 async def _get_or_create_user(
     firebase_uid: str, email: str,
 ) -> tuple[dict, dict]:
-    """Lookup user by firebase_uid. Auto-create tenant + user."""
+    """Lookup user by firebase_uid. Auto-create on first login."""
     from db.client import get_supabase
 
     sb = get_supabase()
-
     result = (
         sb.table("users")
         .select("*")
@@ -172,12 +152,5 @@ async def _get_or_create_user(
         "display_name": email.split("@")[0],
         "role": "admin",
     }).execute()
-
-    logger.info(
-        "auto_provisioned_user",
-        firebase_uid=firebase_uid,
-        tenant_id=tenant_row["id"],
-        email=email,
-    )
 
     return user_data.data[0], tenant_row
