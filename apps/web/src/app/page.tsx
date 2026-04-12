@@ -28,7 +28,6 @@ export default function LandingPage() {
       <section className="relative min-h-screen flex items-center">
         {/* Background satellite image — right 60% */}
         <div className="absolute right-0 top-0 bottom-0 w-[60%]">
-          {/* Placeholder gradient until hero-delhi.jpg is provided */}
           <div className="absolute inset-0 bg-gradient-to-bl from-accent-heat/20 via-bg to-bg" />
           <div className="absolute inset-0 bg-gradient-to-r from-bg via-bg/80 to-transparent" />
         </div>
@@ -42,9 +41,9 @@ export default function LandingPage() {
           </h1>
 
           <p className="font-body text-base leading-relaxed text-text-secondary mb-12 max-w-[440px]">
-            Sustainmetric is the first multimodal intelligence engine that reads
-            the data Indian cities generate and turns it into climate action a
-            corporate auditor will accept.
+            The first multimodal intelligence engine that reads the data Indian
+            cities generate and turns it into climate action a corporate auditor
+            will accept.
           </p>
 
           <Link

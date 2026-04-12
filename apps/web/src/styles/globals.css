@@ -47,3 +47,67 @@ body {
   background: rgba(255, 77, 46, 0.3);
   color: #ffffff;
 }
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* MapLibre overrides for dark theme */
+.maplibregl-ctrl-group {
+  background: #0a0a0a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 0 !important;
+}
+
+.maplibregl-ctrl-group button {
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.maplibregl-ctrl-group button span {
+  filter: invert(1);
+}
+
+.maplibregl-ctrl-attrib {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  font-size: 10px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* MapLibre marker override */
+.maplibregl-marker svg {
+  filter: drop-shadow(0 0 6px rgba(255, 77, 46, 0.5));
+}

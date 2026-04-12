@@ -19,23 +19,26 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
-    # Clerk auth
-    CLERK_PUBLISHABLE_KEY: str = ""
-    CLERK_SECRET_KEY: str = ""
-    CLERK_JWKS_URL: str = ""
+    # Firebase Auth (uses Application Default Credentials on Cloud Run,
+    # or GOOGLE_APPLICATION_CREDENTIALS env var locally)
+    FIREBASE_PROJECT_ID: str = "sustainmetric"
 
     # Gemini
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # Sentinel Hub
+    # Data sources — Satellite
     SENTINEL_HUB_CLIENT_ID: str = ""
     SENTINEL_HUB_CLIENT_SECRET: str = ""
+    COPERNICUS_CDSE_USERNAME: str = ""
+    COPERNICUS_CDSE_PASSWORD: str = ""
 
-    # Mapillary
+    # Data sources — Street & Air
     MAPILLARY_TOKEN: str = ""
+    OPENAQ_API_KEY: str = ""
+    NASA_FIRMS_MAP_KEY: str = ""
 
-    # Mapbox (used for frontend but backend may need for static tiles)
+    # Maps (frontend-only, but backend may use for static tiles)
     MAPBOX_TOKEN: str = ""
 
     # Upstash Redis

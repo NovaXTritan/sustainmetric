@@ -10,8 +10,8 @@ import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import health, me, queries
 from config import settings
+from routes import health, me, queries
 
 logger = structlog.get_logger()
 
@@ -26,23 +26,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Sustainmetric API",
-    version="0.1.0",
+    version="0.2.0",
     description="Multimodal urban climate intelligence engine for Indian cities",
     lifespan=lifespan,
 )
 
-# CORS — allow the Vercel frontend in all environments
+# CORS — allow all expected frontend origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://sustainmetric.vercel.app",
+        "https://sustainmetric.web.app",
+        "https://sustainmetric.firebaseapp.com",
         settings.FRONTEND_URL,
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Firebase Auth middleware — verifies JWT, attaches tenant/user to request
+# Only enabled when Supabase is configured (otherwise runs in dev/stub mode)
+if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+    from middleware.auth import FirebaseAuthMiddleware
+    app.add_middleware(FirebaseAuthMiddleware)
 
 
 @app.middleware("http")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from apps.api.main import app
+from main import app
 
 
 @pytest.mark.asyncio

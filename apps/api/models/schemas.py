@@ -1,0 +1,156 @@
+"""Pydantic models — single source of truth for all API shapes."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+# ── Enums ─────────────────────────────────────────────────────
+
+class QueryStatus(str, Enum):
+    PENDING = "pending"
+    FETCHING_DATA = "fetching_data"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class EquityFlag(str, Enum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class InterventionType(str, Enum):
+    COOL_ROOF = "cool_roof"
+    URBAN_TREE = "urban_tree"
+    POCKET_PARK = "pocket_park"
+    PERMEABLE_PAVEMENT = "permeable_pavement"
+    REFLECTIVE_PAVEMENT = "reflective_pavement"
+    WATER_BODY = "water_body"
+    GREEN_WALL = "green_wall"
+
+
+# ── Auth / User ───────────────────────────────────────────────
+
+class TenantResponse(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    plan: str
+    monthly_query_quota: int
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    firebase_uid: str
+    tenant_id: UUID
+    email: str
+    display_name: str | None
+    role: str
+
+
+class MeResponse(BaseModel):
+    user: UserResponse
+    tenant: TenantResponse
+
+
+# ── Data Fetchers ─────────────────────────────────────────────
+
+class FetchResult(BaseModel):
+    source: str
+    data: dict[str, Any]
+    source_url: str | None = None
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    freshness_seconds: int = 0
+    error: str | None = None
+
+
+# ── Gemini Analysis Output ────────────────────────────────────
+
+class InterventionOption(BaseModel):
+    type: InterventionType
+    description: str
+    estimated_cost_inr: float = Field(ge=500, le=5_000_000)
+    projected_temperature_reduction_celsius: float
+    equity_score: float = Field(ge=0, le=1)
+    time_to_impact_months: int
+
+
+class ProjectedImpactMetrics(BaseModel):
+    estimated_lst_reduction_celsius: float
+    estimated_energy_savings_percent: float
+    estimated_aqi_improvement_percent: float | None = None
+    green_cover_increase_sqm: float | None = None
+    beneficiary_count_estimate: int | None = None
+
+
+class SiteAnalysisResponse(BaseModel):
+    site_characterization: str
+    vulnerability_assessment: str
+    intervention_options: list[InterventionOption]
+    recommended_bundle: str
+    equity_flag: EquityFlag
+    projected_impact_metrics: ProjectedImpactMetrics
+    brsr_principle_6_line_items: list[str]
+    data_freshness_notes: str
+    model_confidence: float = Field(ge=0, le=1)
+
+
+# ── Query lifecycle ───────────────────────────────────────────
+
+class QueryCreate(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    site_id: UUID | None = None
+
+
+class QueryResponse(BaseModel):
+    id: UUID
+    status: QueryStatus
+    lat: float
+    lon: float
+    served_from_cache: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
+class QueryOutput(BaseModel):
+    id: UUID
+    query_id: UUID
+    model_used: str
+    cost_inr: float
+    analysis: SiteAnalysisResponse | None = None
+    validation_warnings: list[str] = []
+    cache_source: str | None = None
+    created_at: datetime
+
+
+# ── Audit ─────────────────────────────────────────────────────
+
+class AuditLogCreate(BaseModel):
+    tenant_id: UUID
+    user_id: UUID | None = None
+    action: str
+    resource_type: str | None = None
+    resource_id: UUID | None = None
+    request_method: str | None = None
+    request_path: str | None = None
+    request_body: dict[str, Any] | None = None
+    response_status: int | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+
+
+# ── SSE Stream Events ────────────────────────────────────────
+
+class StreamEvent(BaseModel):
+    event: str  # "fetch_complete", "analysis_started", "analysis_section", "done", "error"
+    source: str | None = None
+    data: dict[str, Any] = {}
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
