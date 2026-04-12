@@ -11,15 +11,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
-from fastapi import HTTPException, Request
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.base import (
+    BaseHTTPMiddleware,
+    RequestResponseEndpoint,
+)
+from starlette.responses import JSONResponse
 
 if TYPE_CHECKING:
+    from fastapi import Request
     from starlette.responses import Response
 
 logger = structlog.get_logger()
 
-# Firebase Admin is initialized lazily on first use
 _firebase_initialized = False
 _firebase_available = False
 
@@ -51,7 +54,6 @@ def _verify_token(token: str) -> dict:
     return auth.verify_id_token(token)
 
 
-# Paths that skip auth entirely
 PUBLIC_PATHS = {
     "/api/v1/health",
     "/docs",
@@ -63,26 +65,25 @@ PUBLIC_PATHS = {
 class FirebaseAuthMiddleware(BaseHTTPMiddleware):
     """Verify Firebase ID token on every request except public paths.
 
-    Falls back to passthrough mode if Firebase Admin is not configured.
+    Note: uses JSONResponse instead of HTTPException because
+    Starlette BaseHTTPMiddleware doesn't propagate HTTPException
+    to FastAPI's exception handlers properly.
     """
 
     async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
+        self, request: Request, call_next: RequestResponseEndpoint,
     ) -> Response:
         path = request.url.path.rstrip("/")
 
-        # Skip auth for public endpoints and OPTIONS (CORS preflight)
         if path in PUBLIC_PATHS or request.method == "OPTIONS":
             return await call_next(request)
 
-        # Check if Firebase is available
         firebase_ok = _ensure_firebase_init()
 
         auth_header = request.headers.get("authorization", "")
         has_token = auth_header.startswith("Bearer ")
 
         if has_token and firebase_ok:
-            # Full Firebase auth flow
             token = auth_header.split("Bearer ", 1)[1]
             try:
                 decoded = _verify_token(token)
@@ -91,10 +92,10 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
                     "firebase_token_verification_failed",
                     error=str(e),
                 )
-                raise HTTPException(
+                return JSONResponse(
                     status_code=401,
-                    detail="Invalid or expired token",
-                ) from e
+                    content={"detail": "Invalid or expired token"},
+                )
 
             firebase_uid: str = decoded["uid"]
             email: str = decoded.get("email", "")
@@ -103,15 +104,15 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
                 user_row, tenant_row = await _get_or_create_user(
                     firebase_uid, email,
                 )
-            except Exception as e:
+            except Exception:
                 logger.exception(
                     "user_lookup_failed",
                     firebase_uid=firebase_uid,
                 )
-                raise HTTPException(
+                return JSONResponse(
                     status_code=500,
-                    detail="User provisioning failed",
-                ) from e
+                    content={"detail": "User provisioning failed"},
+                )
 
             request.state.tenant_id = user_row["tenant_id"]
             request.state.user_id = user_row["id"]
@@ -120,14 +121,14 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
             request.state.role = user_row["role"]
 
         elif not firebase_ok:
-            # Passthrough mode — no auth, endpoints handle gracefully
+            # Passthrough — no auth available
             logger.debug("auth_passthrough", path=path)
 
         else:
-            # Firebase is configured but no token provided
-            raise HTTPException(
+            # Firebase configured but no token
+            return JSONResponse(
                 status_code=401,
-                detail="Missing or invalid Authorization header",
+                content={"detail": "Missing Authorization header"},
             )
 
         return await call_next(request)
@@ -136,7 +137,7 @@ class FirebaseAuthMiddleware(BaseHTTPMiddleware):
 async def _get_or_create_user(
     firebase_uid: str, email: str,
 ) -> tuple[dict, dict]:
-    """Lookup user by firebase_uid. Auto-create tenant + user on first login."""
+    """Lookup user by firebase_uid. Auto-create tenant + user."""
     from db.client import get_supabase
 
     sb = get_supabase()
