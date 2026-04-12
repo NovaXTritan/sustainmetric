@@ -1,0 +1,15 @@
+# Render Blueprint — deploy FastAPI backend as a free web service
+services:
+  - type: web
+    name: sustainmetric-api
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install uv && cd apps/api && uv pip install --system ."
+    startCommand: "cd apps/api && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 10"
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: ENVIRONMENT
+        value: production
