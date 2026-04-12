@@ -1,7 +1,5 @@
 """GET /me — returns the authenticated user's profile and tenant info."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, HTTPException, Request
 
 from db.audit import audit_from_request

@@ -1,15 +1,13 @@
 """Pydantic models — single source of truth for all API shapes."""
-
-from __future__ import annotations
+# NOTE: do NOT use 'from __future__ import annotations' here.
+# Pydantic needs real types at runtime to build validators.
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from uuid import UUID
 
 # ── Enums ─────────────────────────────────────────────────────
 
