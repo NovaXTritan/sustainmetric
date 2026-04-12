@@ -1,6 +1,6 @@
 """Query endpoints — POST /queries, GET /queries/{id}, GET /queries/{id}/stream."""
-
-from __future__ import annotations
+# NOTE: do NOT use 'from __future__ import annotations' here.
+# It breaks Pydantic model validation in FastAPI endpoint signatures.
 
 import asyncio
 import json
