@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import math
-from datetime import datetime, timezone
-from uuid import UUID
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
@@ -15,7 +15,9 @@ from config import settings
 from db.audit import audit_from_request
 from db.client import get_supabase
 from db.redis import get_query_count, increment_query_counter
-from models.schemas import QueryCreate, QueryStatus
+
+if TYPE_CHECKING:
+    from models.schemas import QueryCreate
 
 logger = structlog.get_logger()
 
@@ -27,14 +29,16 @@ CACHE_RADIUS_M = 100
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Haversine distance in meters between two points."""
-    R = 6_371_000
+    earth_radius_m = 6_371_000
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
     )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return earth_radius_m * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def _find_cached_query(sb, lat: float, lon: float, tenant_id: str) -> dict | None:
@@ -67,8 +71,18 @@ async def create_query(body: QueryCreate, request: Request) -> dict:
 
     # Cost guardrail: check tenant quota
     sb = get_supabase()
-    tenant_result = sb.table("tenants").select("monthly_query_quota").eq("id", str(tenant_id)).single().execute()
-    quota = tenant_result.data["monthly_query_quota"] if tenant_result.data else settings.DEFAULT_MONTHLY_QUERY_QUOTA
+    tenant_result = (
+        sb.table("tenants")
+        .select("monthly_query_quota")
+        .eq("id", str(tenant_id))
+        .single()
+        .execute()
+    )
+    quota = (
+        tenant_result.data["monthly_query_quota"]
+        if tenant_result.data
+        else settings.DEFAULT_MONTHLY_QUERY_QUOTA
+    )
     current_count = await get_query_count(str(tenant_id))
     if current_count >= quota:
         raise HTTPException(
@@ -159,7 +173,11 @@ async def get_query(query_id: str, request: Request) -> dict:
     }
 
     if row["status"] == "completed" and row.get("query_outputs"):
-        output = row["query_outputs"][0] if isinstance(row["query_outputs"], list) else row["query_outputs"]
+        output = (
+            row["query_outputs"][0]
+            if isinstance(row["query_outputs"], list)
+            else row["query_outputs"]
+        )
         response["output"] = {
             "id": output["id"],
             "model_used": output["model_used"],
@@ -218,7 +236,10 @@ async def stream_query(query_id: str, request: Request):
             if status != last_status:
                 yield {
                     "event": "status",
-                    "data": json.dumps({"status": status, "timestamp": datetime.now(timezone.utc).isoformat()}),
+                    "data": json.dumps({
+                        "status": status,
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }),
                 }
                 last_status = status
 
@@ -280,12 +301,12 @@ async def _run_query_pipeline(query_id: str, tenant_id: str, lat: float, lon: fl
         # Session 3+4: Fan out to data fetchers
         from services.pipeline import run_fetchers_and_analyze
 
-        result = await run_fetchers_and_analyze(query_id, tenant_id, lat, lon)
+        await run_fetchers_and_analyze(query_id, tenant_id, lat, lon)
 
         # Update status to completed
         sb.table("queries").update({
             "status": "completed",
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }).eq("id", query_id).execute()
 
         logger.info("query_pipeline_completed", query_id=query_id)
@@ -295,5 +316,5 @@ async def _run_query_pipeline(query_id: str, tenant_id: str, lat: float, lon: fl
         sb.table("queries").update({
             "status": "failed",
             "error_message": str(e)[:500],
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }).eq("id", query_id).execute()

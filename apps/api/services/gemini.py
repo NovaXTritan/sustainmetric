@@ -135,12 +135,17 @@ async def analyze_with_gemini(lat: float, lon: float, fetcher_data: dict) -> dic
             text = response.text
             analysis = json.loads(text)
 
+            usage_meta = getattr(response, "usage_metadata", None)
             return {
                 "analysis": analysis,
                 "raw": {"text": text},
                 "usage": {
-                    "prompt_tokens": getattr(response.usage_metadata, "prompt_token_count", 0) if hasattr(response, "usage_metadata") else 0,
-                    "completion_tokens": getattr(response.usage_metadata, "candidates_token_count", 0) if hasattr(response, "usage_metadata") else 0,
+                    "prompt_tokens": getattr(
+                        usage_meta, "prompt_token_count", 0,
+                    ) if usage_meta else 0,
+                    "completion_tokens": getattr(
+                        usage_meta, "candidates_token_count", 0,
+                    ) if usage_meta else 0,
                 },
             }
 
@@ -164,8 +169,14 @@ def _placeholder_response(lat: float, lon: float) -> dict:
     """Return a structured placeholder when Gemini API key is not configured."""
     return {
         "analysis": {
-            "site_characterization": f"Urban area at coordinates ({lat}, {lon}). Gemini API key not configured — this is placeholder data.",
-            "vulnerability_assessment": "Unable to assess without Gemini. Configure GEMINI_API_KEY in .env.local.",
+            "site_characterization": (
+                f"Urban area at coordinates ({lat}, {lon}). "
+                "Gemini API key not configured — this is placeholder data."
+            ),
+            "vulnerability_assessment": (
+                "Unable to assess without Gemini. "
+                "Configure GEMINI_API_KEY in .env.local."
+            ),
             "intervention_options": [
                 {
                     "type": "cool_roof",
@@ -184,7 +195,10 @@ def _placeholder_response(lat: float, lon: float) -> dict:
                     "time_to_impact_months": 24,
                 },
             ],
-            "recommended_bundle": "Cool roofs for immediate impact + urban trees for long-term cooling",
+            "recommended_bundle": (
+                "Cool roofs for immediate impact "
+                "+ urban trees for long-term cooling"
+            ),
             "equity_flag": "MEDIUM",
             "projected_impact_metrics": {
                 "estimated_lst_reduction_celsius": 3.0,
@@ -205,7 +219,9 @@ def _placeholder_response(lat: float, lon: float) -> dict:
     }
 
 
-FALLBACK_PROMPT = """You are an urban climate intelligence engine analyzing a site in an Indian city.
+FALLBACK_PROMPT = """\
+You are an urban climate intelligence engine \
+analyzing a site in an Indian city.
 
 Analyze the following location at coordinates ({{ lat }}, {{ lon }}) using the data below.
 

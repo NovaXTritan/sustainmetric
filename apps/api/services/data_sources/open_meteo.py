@@ -6,7 +6,7 @@ for urban heat island analysis. Completely free, 10k requests/day.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -55,7 +55,7 @@ class OpenMeteoFetcher(BaseFetcher):
             forecast_data = forecast_resp.json()
 
             # Historical ERA5 data (last 7 days for trend)
-            end_date = datetime.now(timezone.utc) - timedelta(days=5)
+            end_date = datetime.now(UTC) - timedelta(days=5)
             start_date = end_date - timedelta(days=7)
             history_resp = await client.get(
                 f"{self.BASE_URL}/archive",
@@ -76,7 +76,10 @@ class OpenMeteoFetcher(BaseFetcher):
                 params={
                     "latitude": lat,
                     "longitude": lon,
-                    "hourly": "pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide,uv_index",
+                    "hourly": (
+                        "pm2_5,pm10,nitrogen_dioxide,"
+                        "sulphur_dioxide,ozone,carbon_monoxide,uv_index"
+                    ),
                     "forecast_days": 1,
                     "timezone": "Asia/Kolkata",
                 },

@@ -94,7 +94,11 @@ class OpenAQFetcher(BaseFetcher):
                             if results:
                                 latest = results[0]
                                 sensor["latest_value"] = latest.get("value")
-                                sensor["latest_datetime"] = latest.get("period", {}).get("datetimeTo", {}).get("utc")
+                                sensor["latest_datetime"] = (
+                                    latest.get("period", {})
+                                    .get("datetimeTo", {})
+                                    .get("utc")
+                                )
                     except Exception:
                         pass
 

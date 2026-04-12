@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import structlog
-from fastapi import Request
 
 from db.client import get_supabase
 from models.schemas import AuditLogCreate
+
+if TYPE_CHECKING:
+    from fastapi import Request
 
 logger = structlog.get_logger()
 

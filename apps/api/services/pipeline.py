@@ -8,7 +8,6 @@ Session 4: Gemini integration wired in.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 
 import structlog
 
@@ -36,11 +35,11 @@ async def run_fetchers_and_analyze(
     sb.table("queries").update({"status": "fetching_data"}).eq("id", query_id).execute()
 
     # ── Step 1: Fan out to data fetchers ──────────────────────
+    from services.data_sources.firms import NASAFIRMSFetcher
+    from services.data_sources.mapillary import MapillaryFetcher
     from services.data_sources.open_meteo import OpenMeteoFetcher
     from services.data_sources.openaq import OpenAQFetcher
     from services.data_sources.overpass import OverpassFetcher
-    from services.data_sources.firms import NASAFIRMSFetcher
-    from services.data_sources.mapillary import MapillaryFetcher
 
     fetchers = [
         OpenMeteoFetcher(),
@@ -118,7 +117,7 @@ async def _run_fetcher(fetcher, query_id: str, tenant_id: str, lat: float, lon: 
             "freshness_seconds": result.freshness_seconds,
         }
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("fetcher_timeout", source=source, query_id=query_id)
         sb.table("query_inputs").insert({
             "query_id": query_id,

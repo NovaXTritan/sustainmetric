@@ -59,7 +59,7 @@ class NASAFIRMSFetcher(BaseFetcher):
         hotspots = []
         for line in lines[1:]:
             values = line.split(",")
-            row = dict(zip(header, values))
+            row = dict(zip(header, values, strict=False))
             hotspots.append({
                 "latitude": float(row.get("latitude", 0)),
                 "longitude": float(row.get("longitude", 0)),

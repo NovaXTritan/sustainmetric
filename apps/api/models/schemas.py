@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any
-from uuid import UUID
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+if TYPE_CHECKING:
+    from uuid import UUID
 
 # ── Enums ─────────────────────────────────────────────────────
 
-class QueryStatus(str, Enum):
+class QueryStatus(StrEnum):
     PENDING = "pending"
     FETCHING_DATA = "fetching_data"
     PROCESSING = "processing"
@@ -20,13 +21,13 @@ class QueryStatus(str, Enum):
     FAILED = "failed"
 
 
-class EquityFlag(str, Enum):
+class EquityFlag(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
 
 
-class InterventionType(str, Enum):
+class InterventionType(StrEnum):
     COOL_ROOF = "cool_roof"
     URBAN_TREE = "urban_tree"
     POCKET_PARK = "pocket_park"
@@ -66,7 +67,7 @@ class FetchResult(BaseModel):
     source: str
     data: dict[str, Any]
     source_url: str | None = None
-    fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    fetched_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     freshness_seconds: int = 0
     error: str | None = None
 
@@ -153,4 +154,4 @@ class StreamEvent(BaseModel):
     event: str  # "fetch_complete", "analysis_started", "analysis_section", "done", "error"
     source: str | None = None
     data: dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

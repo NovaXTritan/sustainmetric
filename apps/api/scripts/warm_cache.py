@@ -10,8 +10,9 @@ informal settlements, commercial areas, parks, and industrial zones.
 from __future__ import annotations
 
 import asyncio
-import httpx
 import sys
+
+import httpx
 
 # 20 hand-picked Delhi locations for demo
 DELHI_LOCATIONS = [
