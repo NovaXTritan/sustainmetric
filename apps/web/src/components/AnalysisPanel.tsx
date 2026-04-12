@@ -7,8 +7,7 @@ const SOURCE_LABELS: Record<string, string> = {
   open_meteo: "WEATHER",
   openaq: "AIR QUALITY",
   overpass_osm: "LAND USE",
-  nasa_firms: "THERMAL",
-  open_meteo_thermal: "THERMAL",
+  surface_conditions_era5: "SURFACE (ERA5)",
   mapillary: "STREET VIEW",
 };
 

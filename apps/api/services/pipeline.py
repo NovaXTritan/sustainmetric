@@ -35,7 +35,7 @@ async def run_fetchers_and_analyze(
     sb.table("queries").update({"status": "fetching_data"}).eq("id", query_id).execute()
 
     # ── Step 1: Fan out to data fetchers ──────────────────────
-    from services.data_sources.firms import NASAFIRMSFetcher
+    from services.data_sources.firms import SurfaceConditionsFetcher
     from services.data_sources.mapillary import MapillaryFetcher
     from services.data_sources.open_meteo import OpenMeteoFetcher
     from services.data_sources.openaq import OpenAQFetcher
@@ -45,7 +45,7 @@ async def run_fetchers_and_analyze(
         OpenMeteoFetcher(),
         OpenAQFetcher(),
         OverpassFetcher(),
-        NASAFIRMSFetcher(),
+        SurfaceConditionsFetcher(),
         MapillaryFetcher(),
     ]
 
