@@ -126,8 +126,8 @@ async def analyze_with_gemini(lat: float, lon: float, fetcher_data: dict) -> dic
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": OUTPUT_SCHEMA,
-                    "temperature": 0.3,
-                    "max_output_tokens": 8192,
+                    "temperature": 0.2,
+                    "max_output_tokens": 6144,
                 },
             )
 

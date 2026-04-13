@@ -5,7 +5,10 @@ import maplibregl from "maplibre-gl";
 import { useMapStore } from "@/lib/store";
 import { createQuery, getQuery } from "@/lib/api";
 
-// CARTO Dark Matter raster tiles — free, no API key
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// CARTO Dark Matter — no API key, fast CDN
 const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -35,10 +38,65 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
 
 const DELHI: [number, number] = [77.209, 28.6139];
 
+/** Stream query updates via SSE — provides real-time fetcher completion events */
+function streamQueryProgress(
+  queryId: string,
+  onFetchComplete: (source: string, freshness: number, hasError: boolean) => void,
+  onComplete: (analysis: unknown) => void,
+  onError: (msg: string) => void,
+): () => void {
+  const url = `${API_BASE}/api/v1/queries/${queryId}/stream`;
+  const es = new EventSource(url);
+
+  const seenSources = new Set<string>();
+
+  es.addEventListener("fetch_complete", (e) => {
+    try {
+      const data = JSON.parse((e as MessageEvent).data);
+      if (!seenSources.has(data.source)) {
+        seenSources.add(data.source);
+        onFetchComplete(
+          data.source,
+          data.freshness_seconds ?? 0,
+          data.has_error ?? false,
+        );
+      }
+    } catch {}
+  });
+
+  es.addEventListener("analysis_complete", (e) => {
+    try {
+      const data = JSON.parse((e as MessageEvent).data);
+      if (data.analysis) onComplete(data.analysis);
+    } catch {}
+  });
+
+  es.addEventListener("done", () => {
+    es.close();
+  });
+
+  es.addEventListener("error", (e) => {
+    try {
+      const msgEvent = e as MessageEvent;
+      if (msgEvent.data) {
+        const data = JSON.parse(msgEvent.data);
+        onError(data.message || "Stream error");
+      }
+    } catch {}
+  });
+
+  es.onerror = () => {
+    es.close();
+  };
+
+  return () => es.close();
+}
+
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -60,12 +118,18 @@ export default function MapView() {
 
     map.addControl(
       new maplibregl.NavigationControl({ showCompass: false }),
-      "top-left"
+      "top-left",
     );
 
     map.on("click", async (e) => {
       const { lng, lat } = e.lngLat;
       const store = useMapStore.getState();
+
+      // Close previous stream if any
+      if (streamCleanupRef.current) {
+        streamCleanupRef.current();
+        streamCleanupRef.current = null;
+      }
 
       // Drop marker
       if (markerRef.current) markerRef.current.remove();
@@ -76,45 +140,55 @@ export default function MapView() {
       store.selectPoint(lat, lng);
 
       try {
+        const t0 = performance.now();
         const query = await createQuery(lat, lng);
         store.setQueryId(query.id);
         store.setQueryStatus(query.status);
 
+        // Cache hit — instant
         if (query.served_from_cache && query.status === "completed") {
           store.setServedFromCache(true);
           const full = await getQuery(query.id);
           if (full.output?.analysis) {
             store.setAnalysis(full.output.analysis);
+            console.log(`Cache hit in ${Math.round(performance.now() - t0)}ms`);
           }
           return;
         }
 
-        // Poll
-        for (let i = 0; i < 120; i++) {
-          await new Promise((r) => setTimeout(r, 1000));
-          try {
-            const result = await getQuery(query.id);
-            store.setQueryStatus(result.status);
-            if (result.status === "completed" && result.output?.analysis) {
-              store.setAnalysis(result.output.analysis);
-              return;
-            }
-            if (result.status === "failed") {
-              store.setError(result.error || "Analysis failed");
-              return;
-            }
-          } catch {}
-        }
-        store.setError("Analysis timed out after 2 minutes");
+        // Live stream the progress via SSE
+        streamCleanupRef.current = streamQueryProgress(
+          query.id,
+          (source, freshness, hasError) => {
+            store.addFetchStatus({
+              source,
+              freshness_seconds: freshness,
+              fetched_at: new Date().toISOString(),
+              has_error: hasError,
+            });
+          },
+          (analysis) => {
+            store.setAnalysis(analysis as never);
+            console.log(
+              `Fresh analysis in ${Math.round(performance.now() - t0)}ms`,
+            );
+          },
+          (msg) => {
+            store.setError(msg);
+          },
+        );
       } catch (err) {
         console.error("Query failed:", err);
-        store.setError(err instanceof Error ? err.message : "Failed to create query");
+        store.setError(
+          err instanceof Error ? err.message : "Failed to create query",
+        );
       }
     });
 
     mapRef.current = map;
 
     return () => {
+      if (streamCleanupRef.current) streamCleanupRef.current();
       map.remove();
       mapRef.current = null;
     };

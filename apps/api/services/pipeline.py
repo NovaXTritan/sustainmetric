@@ -97,7 +97,7 @@ async def _run_fetcher(fetcher, query_id: str, tenant_id: str, lat: float, lon: 
     source = fetcher.__class__.__name__
 
     try:
-        result = await asyncio.wait_for(fetcher.fetch(lat, lon), timeout=25.0)
+        result = await asyncio.wait_for(fetcher.fetch(lat, lon), timeout=12.0)
 
         # Persist to query_inputs
         sb.table("query_inputs").insert({
@@ -124,7 +124,7 @@ async def _run_fetcher(fetcher, query_id: str, tenant_id: str, lat: float, lon: 
             "tenant_id": tenant_id,
             "source": source,
             "data": {},
-            "error": "Timeout after 25 seconds",
+            "error": "Timeout after 12 seconds",
             "freshness_seconds": 0,
         }).execute()
         return {"source": source, "data": {}, "error": "timeout"}
