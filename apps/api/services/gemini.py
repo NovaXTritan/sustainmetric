@@ -118,8 +118,8 @@ async def analyze_with_gemini(lat: float, lon: float, fetcher_data: dict) -> dic
         fetcher_data=json.dumps(fetcher_data, indent=2, default=str),
     )
 
-    # Retry logic: 3 attempts, exponential backoff (longer for 429 rate limits)
-    backoff_delays = [2, 8, 30]
+    # Retry logic: 3 attempts, short exponential backoff
+    backoff_delays = [1, 3, 6]
     last_error = None
 
     for attempt, delay in enumerate(backoff_delays):

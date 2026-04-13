@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # Gemini
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # Data sources — Satellite
     SENTINEL_HUB_CLIENT_ID: str = ""
