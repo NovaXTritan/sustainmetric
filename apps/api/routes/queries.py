@@ -40,12 +40,24 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _find_cached_query(sb, lat: float, lon: float, tenant_id: str) -> dict | None:
-    """Find a completed query within CACHE_RADIUS_M of the given point."""
+    """Find a completed query within CACHE_RADIUS_M using bbox filter + haversine.
+
+    Uses a ±0.002 degree bbox (~220m at Delhi latitude) to prune the
+    search space before precise haversine check. This avoids a full
+    table scan as the query history grows.
+    """
+    # 100m cache radius → 0.001 degrees at Delhi; use 0.002 as safety buffer
+    delta = 0.002
     result = (
         sb.table("queries")
         .select("*, query_outputs(*)")
         .eq("status", "completed")
         .eq("tenant_id", tenant_id)
+        .gte("lat", lat - delta)
+        .lte("lat", lat + delta)
+        .gte("lon", lon - delta)
+        .lte("lon", lon + delta)
+        .limit(10)
         .execute()
     )
     for row in result.data or []:
