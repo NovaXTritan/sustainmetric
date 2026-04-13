@@ -12,6 +12,7 @@ export interface FetchStatus {
   has_error: boolean;
   error_message?: string;
   summary?: string;
+  thumb_url?: string;
 }
 
 interface MapStore {

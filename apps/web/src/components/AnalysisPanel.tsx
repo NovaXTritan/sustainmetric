@@ -12,6 +12,7 @@ interface SourceMeta {
 }
 
 const SOURCES: SourceMeta[] = [
+  { id: "nominatim", label: "LOCATION · NOMINATIM", description: "Ward, district, city" },
   { id: "open_meteo", label: "WEATHER · OPEN-METEO", description: "Live temperature, humidity, wind" },
   { id: "openaq", label: "AIR QUALITY · OPENAQ", description: "Nearest CPCB monitor PM2.5" },
   { id: "overpass_osm", label: "URBAN FABRIC · OSM", description: "Buildings, roads, parks within 200m" },
@@ -141,26 +142,69 @@ function DataSourceList() {
   );
 }
 
+// Compute slippy-map tile coords from lat/lon at a given zoom
+function latLonToTile(
+  lat: number,
+  lon: number,
+  zoom: number,
+): { x: number; y: number; z: number } {
+  const z = zoom;
+  const n = 2 ** z;
+  const x = Math.floor(((lon + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+  );
+  return { x, y, z };
+}
+
 function MediaBlock() {
-  const { fetchStatuses } = useMapStore();
+  const { fetchStatuses, selectedLat, selectedLon } = useMapStore();
   const mapillary = fetchStatuses.find((s) => s.source === "mapillary");
-  const hasMapillary = mapillary && !mapillary.has_error;
+  const hasMapillaryImage = mapillary && !mapillary.has_error && mapillary.thumb_url;
 
-  if (!hasMapillary) return null;
+  // Show nothing until first fetcher returns or coords selected
+  if (!selectedLat || !selectedLon) return null;
 
-  // NOTE: We could pull thumb_url from the raw data but it's not in the stream.
-  // For now, show a placeholder indicating imagery is available.
+  // Satellite tile from CARTO Voyager at zoom 17
+  const { x, y, z } = latLonToTile(selectedLat, selectedLon, 17);
+  const satUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`;
+
   return (
     <div className="mt-5 grid grid-cols-2 gap-2 animate-fadeIn">
-      <div className="aspect-video bg-bg-elevated border border-border flex items-center justify-center">
-        <span className="font-mono text-[9px] text-text-tertiary uppercase tracking-wider">
-          Satellite · CARTO
-        </span>
+      <div className="aspect-video bg-bg-elevated border border-border overflow-hidden relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={satUrl}
+          alt="Satellite tile"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute bottom-1 left-1 font-mono text-[9px] text-white bg-black/60 px-1.5 py-0.5 uppercase tracking-wider">
+          Map tile · z{z}
+        </div>
       </div>
-      <div className="aspect-video bg-bg-elevated border border-border flex items-center justify-center">
-        <span className="font-mono text-[9px] text-text-tertiary uppercase tracking-wider">
-          Street · Mapillary
-        </span>
+      <div className="aspect-video bg-bg-elevated border border-border overflow-hidden relative">
+        {hasMapillaryImage ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mapillary.thumb_url}
+              alt="Street view"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-1 left-1 font-mono text-[9px] text-white bg-black/60 px-1.5 py-0.5 uppercase tracking-wider">
+              Street · Mapillary
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="font-mono text-[9px] text-text-tertiary uppercase tracking-wider text-center px-4">
+              {mapillary?.has_error
+                ? "No street imagery within 200m"
+                : "Street view loading..."}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

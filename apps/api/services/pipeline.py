@@ -37,6 +37,7 @@ async def run_fetchers_and_analyze(
     # ── Step 1: Fan out to data fetchers ──────────────────────
     from services.data_sources.firms import SurfaceConditionsFetcher
     from services.data_sources.mapillary import MapillaryFetcher
+    from services.data_sources.nominatim import NominatimFetcher
     from services.data_sources.open_meteo import OpenMeteoFetcher
     from services.data_sources.openaq import OpenAQFetcher
     from services.data_sources.overpass import OverpassFetcher
@@ -47,6 +48,7 @@ async def run_fetchers_and_analyze(
         OverpassFetcher(),
         SurfaceConditionsFetcher(),
         MapillaryFetcher(),
+        NominatimFetcher(),
     ]
 
     fetch_results = await asyncio.gather(

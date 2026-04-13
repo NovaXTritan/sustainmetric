@@ -39,9 +39,18 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
 const DELHI: [number, number] = [77.209, 28.6139];
 
 /** Stream query updates via SSE — provides real-time fetcher completion events */
+interface FetchCompletePayload {
+  source: string;
+  freshness_seconds: number;
+  has_error: boolean;
+  error_message?: string;
+  summary?: string;
+  thumb_url?: string;
+}
+
 function streamQueryProgress(
   queryId: string,
-  onFetchComplete: (source: string, freshness: number, hasError: boolean) => void,
+  onFetchComplete: (payload: FetchCompletePayload) => void,
   onComplete: (analysis: unknown) => void,
   onError: (msg: string) => void,
 ): () => void {
@@ -55,11 +64,7 @@ function streamQueryProgress(
       const data = JSON.parse((e as MessageEvent).data);
       if (!seenSources.has(data.source)) {
         seenSources.add(data.source);
-        onFetchComplete(
-          data.source,
-          data.freshness_seconds ?? 0,
-          data.has_error ?? false,
-        );
+        onFetchComplete(data);
       }
     } catch {}
   });
@@ -159,12 +164,15 @@ export default function MapView() {
         // Live stream the progress via SSE
         streamCleanupRef.current = streamQueryProgress(
           query.id,
-          (source, freshness, hasError) => {
+          (payload) => {
             store.addFetchStatus({
-              source,
-              freshness_seconds: freshness,
+              source: payload.source,
+              freshness_seconds: payload.freshness_seconds ?? 0,
               fetched_at: new Date().toISOString(),
-              has_error: hasError,
+              has_error: payload.has_error ?? false,
+              error_message: payload.error_message,
+              summary: payload.summary,
+              thumb_url: payload.thumb_url,
             });
           },
           (analysis) => {

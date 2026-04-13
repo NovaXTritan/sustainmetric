@@ -266,6 +266,15 @@ async def stream_query(query_id: str, request: Request):
                         if isinstance(data_json, dict)
                         else ""
                     )
+                    # Extract thumbnail URL if available (Mapillary)
+                    thumb_url = None
+                    if (
+                        inp["source"] == "mapillary"
+                        and isinstance(data_json, dict)
+                    ):
+                        images = data_json.get("images", [])
+                        if images and isinstance(images, list):
+                            thumb_url = images[0].get("thumb_url")
                     yield {
                         "event": "fetch_complete",
                         "data": json.dumps({
@@ -275,6 +284,7 @@ async def stream_query(query_id: str, request: Request):
                             "has_error": bool(inp.get("error")),
                             "error_message": inp.get("error"),
                             "summary": summary,
+                            "thumb_url": thumb_url,
                         }),
                     }
 
