@@ -273,7 +273,7 @@ function GeminiAnalysis({ analysis }: { analysis: SiteAnalysis }) {
     <div className="mt-6 animate-fadeIn">
       <div className="flex items-center justify-between mb-4">
         <div className="font-headline text-[11px] uppercase tracking-[0.08em] text-text-primary">
-          MULTIMODAL ANALYSIS · GEMINI 2.5 FLASH
+          MULTIMODAL ANALYSIS · GEMINI 2.0 FLASH
         </div>
         <span
           className={`font-mono text-[10px] font-bold ${

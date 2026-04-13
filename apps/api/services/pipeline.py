@@ -79,7 +79,7 @@ async def run_fetchers_and_analyze(
     sb.table("query_outputs").insert({
         "query_id": query_id,
         "tenant_id": tenant_id,
-        "model_used": "gemini-2.5-flash",
+        "model_used": "gemini-2.0-flash",
         "prompt_tokens": gemini_result.get("usage", {}).get("prompt_tokens", 0),
         "completion_tokens": gemini_result.get("usage", {}).get("completion_tokens", 0),
         "cost_inr": 0,  # Free tier
