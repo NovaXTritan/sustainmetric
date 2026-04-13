@@ -68,6 +68,7 @@ class FetchResult(BaseModel):
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     freshness_seconds: int = 0
     error: str | None = None
+    summary: str = ""  # One-line human-readable description for UI
 
 
 # ── Gemini Analysis Output ────────────────────────────────────
@@ -79,6 +80,7 @@ class InterventionOption(BaseModel):
     projected_temperature_reduction_celsius: float
     equity_score: float = Field(ge=0, le=1)
     time_to_impact_months: int
+    rejection_reason: str = ""
 
 
 class ProjectedImpactMetrics(BaseModel):
@@ -99,6 +101,7 @@ class SiteAnalysisResponse(BaseModel):
     brsr_principle_6_line_items: list[str]
     data_freshness_notes: str
     model_confidence: float = Field(ge=0, le=1)
+    reasoning_narrative: str = ""
 
 
 # ── Query lifecycle ───────────────────────────────────────────

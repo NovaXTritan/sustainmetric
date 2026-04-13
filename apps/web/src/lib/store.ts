@@ -3,13 +3,15 @@
  */
 
 import { create } from "zustand";
-import type { QueryResponse, SiteAnalysis, StreamEvent } from "./api";
+import type { SiteAnalysis } from "./api";
 
-interface FetchStatus {
+export interface FetchStatus {
   source: string;
   freshness_seconds: number;
   fetched_at: string;
   has_error: boolean;
+  error_message?: string;
+  summary?: string;
 }
 
 interface MapStore {
@@ -67,18 +69,16 @@ export const useMapStore = create<MapStore>((set) => ({
     }),
 
   closePanel: () =>
-    set({
-      panelOpen: false,
-      loading: false,
-    }),
+    set({ panelOpen: false, loading: false }),
 
   setQueryId: (id) => set({ queryId: id }),
   setQueryStatus: (status) => set({ queryStatus: status }),
   addFetchStatus: (status) =>
     set((state) => ({
-      fetchStatuses: [...state.fetchStatuses.filter(
-        (s) => s.source !== status.source
-      ), status],
+      fetchStatuses: [
+        ...state.fetchStatuses.filter((s) => s.source !== status.source),
+        status,
+      ],
     })),
   setAnalysis: (analysis) => set({ analysis, loading: false }),
   setServedFromCache: (cached) => set({ servedFromCache: cached }),

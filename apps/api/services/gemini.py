@@ -53,11 +53,13 @@ OUTPUT_SCHEMA = {
                     "projected_temperature_reduction_celsius": {"type": "number"},
                     "equity_score": {"type": "number"},
                     "time_to_impact_months": {"type": "integer"},
+                    "rejection_reason": {"type": "string"},
                 },
                 "required": [
                     "type", "description", "estimated_cost_inr",
                     "projected_temperature_reduction_celsius",
                     "equity_score", "time_to_impact_months",
+                    "rejection_reason",
                 ],
             },
         },
@@ -83,12 +85,14 @@ OUTPUT_SCHEMA = {
         },
         "data_freshness_notes": {"type": "string"},
         "model_confidence": {"type": "number"},
+        "reasoning_narrative": {"type": "string"},
     },
     "required": [
         "site_characterization", "vulnerability_assessment",
         "intervention_options", "recommended_bundle", "equity_flag",
         "projected_impact_metrics", "brsr_principle_6_line_items",
         "data_freshness_notes", "model_confidence",
+        "reasoning_narrative",
     ],
 }
 

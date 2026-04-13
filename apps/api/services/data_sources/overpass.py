@@ -106,6 +106,11 @@ class OverpassFetcher(BaseFetcher):
         )
         green_ratio = categories["green_spaces"] / total
 
+        b = categories["buildings"]
+        r = categories["roads"]
+        g = categories["green_spaces"]
+        summary = f"{b} buildings · {r} roads · {g} parks within {radius}m"
+
         return FetchResult(
             source="overpass_osm",
             data={
@@ -114,13 +119,14 @@ class OverpassFetcher(BaseFetcher):
                 "green_cover_ratio": round(green_ratio, 3),
                 "search_radius_m": radius,
                 "urban_density_indicator": (
-                    "high" if categories["buildings"] > 50
-                    else "medium" if categories["buildings"] > 15
+                    "high" if b > 50
+                    else "medium" if b > 15
                     else "low"
                 ),
                 "has_water_bodies": categories["water_bodies"] > 0,
-                "has_green_spaces": categories["green_spaces"] > 0,
+                "has_green_spaces": g > 0,
             },
             source_url=f"https://www.openstreetmap.org/#map=17/{lat}/{lon}",
             freshness_seconds=86400,
+            summary=summary,
         )

@@ -220,6 +220,7 @@ async def stream_query(query_id: str, request: Request):
     async def event_generator():
         """Poll query status and stream events."""
         last_status = None
+        emitted_sources: set[str] = set()
         poll_count = 0
         max_polls = 60  # 60 * 0.5s = 30s max
 
@@ -251,10 +252,20 @@ async def stream_query(query_id: str, request: Request):
                 }
                 last_status = status
 
-            # Emit fetch completion events
+            # Emit fetch completion events (only newly arrived ones)
             inputs = row.get("query_inputs", []) or []
             if isinstance(inputs, list):
                 for inp in inputs:
+                    key = f"{inp['source']}:{inp.get('fetched_at')}"
+                    if key in emitted_sources:
+                        continue
+                    emitted_sources.add(key)
+                    data_json = inp.get("data") or {}
+                    summary = (
+                        data_json.get("_summary", "")
+                        if isinstance(data_json, dict)
+                        else ""
+                    )
                     yield {
                         "event": "fetch_complete",
                         "data": json.dumps({
@@ -262,6 +273,8 @@ async def stream_query(query_id: str, request: Request):
                             "freshness_seconds": inp["freshness_seconds"],
                             "fetched_at": inp["fetched_at"],
                             "has_error": bool(inp.get("error")),
+                            "error_message": inp.get("error"),
+                            "summary": summary,
                         }),
                     }
 

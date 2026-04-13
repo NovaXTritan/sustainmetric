@@ -86,10 +86,19 @@ class OpenMeteoFetcher(BaseFetcher):
             )
             aq_data = aq_resp.json() if aq_resp.status_code == 200 else {}
 
+        current = forecast_data.get("current", {})
+        temp = current.get("temperature_2m")
+        humidity = current.get("relative_humidity_2m")
+        summary = (
+            f"Current conditions · {temp}°C · {humidity}% humidity"
+            if temp is not None
+            else "Weather data unavailable"
+        )
+
         return FetchResult(
             source="open_meteo",
             data={
-                "current": forecast_data.get("current", {}),
+                "current": current,
                 "hourly_forecast": forecast_data.get("hourly", {}),
                 "historical_era5": history_data.get("hourly", {}),
                 "air_quality_cams": aq_data.get("hourly", {}),
@@ -102,5 +111,6 @@ class OpenMeteoFetcher(BaseFetcher):
                 },
             },
             source_url=f"https://open-meteo.com/en/docs#latitude={lat}&longitude={lon}",
-            freshness_seconds=900,  # 15-minute model update cycle
+            freshness_seconds=900,
+            summary=summary,
         )

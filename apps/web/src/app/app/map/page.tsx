@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import AnalysisPanel from "@/components/AnalysisPanel";
+import AboutOverlay from "@/components/AboutOverlay";
 
 // MapLibre must be loaded client-side only (no SSR)
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -20,9 +22,11 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 });
 
 export default function MapPage() {
+  const [aboutOpen, setAboutOpen] = useState(false);
+
   return (
     <div className="h-screen w-screen bg-bg relative overflow-hidden">
-      {/* Minimal top nav */}
+      {/* Top nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-bg via-bg/80 to-transparent pointer-events-none">
         <Link
           href="/"
@@ -42,6 +46,17 @@ export default function MapPage() {
 
       {/* Analysis panel slides in from right */}
       <AnalysisPanel />
+
+      {/* About button — bottom-left */}
+      <button
+        onClick={() => setAboutOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-3 py-1.5 border border-border hover:border-border-strong text-text-tertiary hover:text-text-primary font-mono text-[10px] uppercase tracking-[0.08em] transition-colors duration-rail bg-bg/80 backdrop-blur"
+      >
+        ABOUT
+      </button>
+
+      {/* About overlay */}
+      <AboutOverlay open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }

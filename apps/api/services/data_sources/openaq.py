@@ -102,6 +102,32 @@ class OpenAQFetcher(BaseFetcher):
                     except Exception:
                         pass
 
+        # Build summary from nearest station with PM2.5 reading
+        summary = f"{len(stations)} stations found within 25km"
+        for m in measurements:
+            for s in m.get("sensors", []):
+                if s.get("parameter") == "pm25" and s.get("latest_value") is not None:
+                    val = s["latest_value"]
+                    if val < 30:
+                        cat = "good"
+                    elif val < 60:
+                        cat = "satisfactory"
+                    elif val < 90:
+                        cat = "moderate"
+                    elif val < 120:
+                        cat = "poor"
+                    elif val < 250:
+                        cat = "very poor"
+                    else:
+                        cat = "severe"
+                    summary = (
+                        f"Nearest station: {m['station_name'][:40]} · "
+                        f"PM2.5 {val:.0f} ({cat})"
+                    )
+                    break
+            if "PM2.5" in summary:
+                break
+
         return FetchResult(
             source="openaq",
             data={
@@ -112,4 +138,5 @@ class OpenAQFetcher(BaseFetcher):
             },
             source_url=f"https://explore.openaq.org/?lat={lat}&lng={lon}",
             freshness_seconds=3600,
+            summary=summary,
         )

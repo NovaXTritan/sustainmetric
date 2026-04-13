@@ -55,6 +55,15 @@ class SurfaceConditionsFetcher(BaseFetcher):
             resp.raise_for_status()
             data = resp.json()
 
+        hourly = data.get("hourly", {})
+        soil_temps = hourly.get("soil_temperature_0cm", [])
+        current_soil = soil_temps[0] if soil_temps else None
+        summary = (
+            f"ERA5 reanalysis · soil temp {current_soil}°C"
+            if current_soil is not None
+            else "ERA5 reanalysis · data incomplete"
+        )
+
         return FetchResult(
             source="surface_conditions_era5",
             data={
@@ -63,13 +72,14 @@ class SurfaceConditionsFetcher(BaseFetcher):
                     "(modeled, not satellite-observed LST)"
                 ),
                 "current": data.get("current", {}),
-                "soil_temperature_hourly": data.get("hourly", {}),
+                "soil_temperature_hourly": hourly,
             },
             source_url=(
                 f"https://open-meteo.com/en/docs"
                 f"#latitude={lat}&longitude={lon}"
             ),
             freshness_seconds=900,
+            summary=summary,
         )
 
     async def _fetch_firms(self, lat: float, lon: float) -> dict:

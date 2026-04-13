@@ -99,12 +99,14 @@ async def _run_fetcher(fetcher, query_id: str, tenant_id: str, lat: float, lon: 
     try:
         result = await asyncio.wait_for(fetcher.fetch(lat, lon), timeout=12.0)
 
-        # Persist to query_inputs
+        # Store summary inside the JSONB data field so we don't need a new column
+        data_with_summary = {**result.data, "_summary": result.summary}
+
         sb.table("query_inputs").insert({
             "query_id": query_id,
             "tenant_id": tenant_id,
             "source": result.source,
-            "data": result.data,
+            "data": data_with_summary,
             "source_url": result.source_url,
             "fetched_at": result.fetched_at.isoformat(),
             "freshness_seconds": result.freshness_seconds,
@@ -115,6 +117,7 @@ async def _run_fetcher(fetcher, query_id: str, tenant_id: str, lat: float, lon: 
             "source": result.source,
             "data": result.data,
             "freshness_seconds": result.freshness_seconds,
+            "summary": result.summary,
         }
 
     except TimeoutError:

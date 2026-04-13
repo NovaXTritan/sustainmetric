@@ -74,6 +74,7 @@ class MapillaryFetcher(BaseFetcher):
                     },
                     source_url=f"https://www.mapillary.com/app/?lat={lat}&lng={lon}&z=17",
                     freshness_seconds=86400,
+                    summary="No street imagery available within 200m",
                 )
 
             # Get map features (detected objects) near the point
@@ -89,6 +90,23 @@ class MapillaryFetcher(BaseFetcher):
             map_features = []
             if features_resp.status_code == 200:
                 map_features = features_resp.json().get("data", [])
+
+        # Find latest image timestamp for summary
+        latest_ts = max(
+            (img.get("captured_at", 0) or 0 for img in images), default=0,
+        )
+        import contextlib
+        from datetime import datetime as _dt
+        latest_str = "recent"
+        if latest_ts:
+            with contextlib.suppress(Exception):
+                latest_str = _dt.fromtimestamp(latest_ts / 1000).strftime(
+                    "%Y-%m",
+                )
+        summary = (
+            f"Latest panorama · {latest_str} · "
+            f"{len(images)} images within 200m"
+        )
 
         return FetchResult(
             source="mapillary",
@@ -117,5 +135,6 @@ class MapillaryFetcher(BaseFetcher):
                 ],
             },
             source_url=f"https://www.mapillary.com/app/?lat={lat}&lng={lon}&z=17",
-            freshness_seconds=86400,  # Imagery doesn't change daily
+            freshness_seconds=86400,
+            summary=summary,
         )

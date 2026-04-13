@@ -33,6 +33,7 @@ export interface InterventionOption {
   projected_temperature_reduction_celsius: number;
   equity_score: number;
   time_to_impact_months: number;
+  rejection_reason?: string;
   low_confidence?: boolean;
 }
 
@@ -52,6 +53,7 @@ export interface SiteAnalysis {
   brsr_principle_6_line_items: string[];
   data_freshness_notes: string;
   model_confidence: number;
+  reasoning_narrative?: string;
 }
 
 export interface StreamEvent {
