@@ -6,6 +6,7 @@ import Link from "next/link";
 import AnalysisPanel from "@/components/AnalysisPanel";
 import AboutOverlay from "@/components/AboutOverlay";
 import TierSelector from "@/components/TierSelector";
+import SearchBar from "@/components/SearchBar";
 import type { Tier } from "@/lib/tier";
 
 // MapLibre must be loaded client-side only (no SSR)
@@ -49,6 +50,9 @@ export default function MapPage() {
 
       {/* Full-viewport map */}
       <MapView />
+
+      {/* Top-center search bar */}
+      <SearchBar />
 
       {/* Analysis panel slides in from right */}
       <AnalysisPanel />

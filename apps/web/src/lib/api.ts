@@ -171,6 +171,27 @@ export async function commitProject(
   return resp.json();
 }
 
+export interface GeocodeResult {
+  display_name: string;
+  lat: number;
+  lon: number;
+  type: string;
+  importance: number;
+}
+
+/** Search Nominatim via backend proxy (rate-limited, India-restricted) */
+export async function geocode(
+  query: string,
+  token?: string,
+): Promise<{ results: GeocodeResult[]; cached: boolean }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const url = `${API_BASE}/api/v1/geocode?q=${encodeURIComponent(query)}`;
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) throw new Error(`Geocode failed: ${resp.status}`);
+  return resp.json();
+}
+
 /** Best-effort write of customer tier to authenticated tenant row. Errors are swallowed. */
 export async function updateTier(tier: CustomerTier, token?: string): Promise<void> {
   const headers: Record<string, string> = {

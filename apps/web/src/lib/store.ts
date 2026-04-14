@@ -30,6 +30,9 @@ interface MapStore {
   error: string | null;
   loading: boolean;
 
+  // Cross-component fly target — set by SearchBar, consumed by MapView
+  flyTarget: { lat: number; lon: number; ts: number } | null;
+
   // Actions
   selectPoint: (lat: number, lon: number) => void;
   closePanel: () => void;
@@ -40,6 +43,7 @@ interface MapStore {
   setServedFromCache: (cached: boolean) => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
+  requestFlyTo: (lat: number, lon: number) => void;
   reset: () => void;
 }
 
@@ -54,6 +58,7 @@ export const useMapStore = create<MapStore>((set) => ({
   servedFromCache: false,
   error: null,
   loading: false,
+  flyTarget: null,
 
   selectPoint: (lat, lon) =>
     set({
@@ -85,6 +90,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setServedFromCache: (cached) => set({ servedFromCache: cached }),
   setError: (error) => set({ error, loading: false }),
   setLoading: (loading) => set({ loading }),
+  requestFlyTo: (lat, lon) =>
+    set({ flyTarget: { lat, lon, ts: Date.now() } }),
   reset: () =>
     set({
       selectedLat: null,

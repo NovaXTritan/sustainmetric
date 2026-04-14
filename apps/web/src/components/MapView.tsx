@@ -5,36 +5,16 @@ import maplibregl from "maplibre-gl";
 import { useMapStore } from "@/lib/store";
 import { createQuery, getQuery } from "@/lib/api";
 
+type AnalyzeFn = (lat: number, lng: number) => Promise<void>;
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// CARTO Dark Matter — no API key, fast CDN
-const MAP_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    carto: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-  layers: [
-    {
-      id: "carto-layer",
-      type: "raster",
-      source: "carto",
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-};
+// CARTO Dark Matter vector style — sharp labels at every zoom level.
+// The previous raster-tile variant pixelated label text past zoom 14
+// and made neighborhood/street names illegible during analysis.
+const MAP_STYLE_URL =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 const DELHI: [number, number] = [77.209, 28.6139];
 
@@ -102,6 +82,8 @@ export default function MapView() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
+  const analyzeRef = useRef<AnalyzeFn | null>(null);
+  const flyTarget = useMapStore((s) => s.flyTarget);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -110,7 +92,7 @@ export default function MapView() {
     try {
       map = new maplibregl.Map({
         container: containerRef.current,
-        style: MAP_STYLE,
+        style: MAP_STYLE_URL,
         center: DELHI,
         zoom: 11,
         minZoom: 3,
@@ -126,17 +108,15 @@ export default function MapView() {
       "top-left",
     );
 
-    map.on("click", async (e) => {
-      const { lng, lat } = e.lngLat;
+    // Shared analysis trigger — used by both map clicks and search-bar selections
+    const runAnalysis: AnalyzeFn = async (lat, lng) => {
       const store = useMapStore.getState();
 
-      // Close previous stream if any
       if (streamCleanupRef.current) {
         streamCleanupRef.current();
         streamCleanupRef.current = null;
       }
 
-      // Drop marker
       if (markerRef.current) markerRef.current.remove();
       markerRef.current = new maplibregl.Marker({ color: "#FF4D2E" })
         .setLngLat([lng, lat])
@@ -150,7 +130,6 @@ export default function MapView() {
         store.setQueryId(query.id);
         store.setQueryStatus(query.status);
 
-        // Cache hit — instant
         if (query.served_from_cache && query.status === "completed") {
           store.setServedFromCache(true);
           const full = await getQuery(query.id);
@@ -161,7 +140,6 @@ export default function MapView() {
           return;
         }
 
-        // Live stream the progress via SSE
         streamCleanupRef.current = streamQueryProgress(
           query.id,
           (payload) => {
@@ -191,6 +169,12 @@ export default function MapView() {
           err instanceof Error ? err.message : "Failed to create query",
         );
       }
+    };
+
+    analyzeRef.current = runAnalysis;
+
+    map.on("click", (e) => {
+      void runAnalysis(e.lngLat.lat, e.lngLat.lng);
     });
 
     mapRef.current = map;
@@ -199,8 +183,20 @@ export default function MapView() {
       if (streamCleanupRef.current) streamCleanupRef.current();
       map.remove();
       mapRef.current = null;
+      analyzeRef.current = null;
     };
   }, []);
+
+  // React to fly requests dispatched by SearchBar
+  useEffect(() => {
+    if (!flyTarget || !mapRef.current || !analyzeRef.current) return;
+    mapRef.current.flyTo({
+      center: [flyTarget.lon, flyTarget.lat],
+      zoom: 15,
+      speed: 1.4,
+    });
+    void analyzeRef.current(flyTarget.lat, flyTarget.lon);
+  }, [flyTarget]);
 
   return <div ref={containerRef} className="absolute inset-0" />;
 }
