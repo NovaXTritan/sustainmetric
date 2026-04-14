@@ -379,6 +379,91 @@ function InterventionCards({ options }: { options: InterventionOption[] }) {
   );
 }
 
+// Persistent hero-product showcase. Renders after every completed analysis
+// regardless of which interventions Gemini ranked — Sustainmetric Pave is
+// the flagship in-house product and must be visible on every results view.
+function HeroProduct() {
+  return (
+    <div className="mt-8 animate-fadeIn">
+      <div className="font-mono text-[10px] tracking-[0.12em] text-accent-cool mb-3">
+        SUSTAINMETRIC HERO PRODUCT
+      </div>
+
+      {/* Pave — primary */}
+      <div className="border-2 border-accent-cool/60 bg-accent-cool/[0.04] p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div className="font-headline text-lg uppercase tracking-button text-text-primary leading-none">
+              SUSTAINMETRIC PAVE
+            </div>
+            <div className="font-mono text-[11px] text-text-tertiary mt-1.5">
+              Bio-mimetic cool road coating · V2 in-house formulation
+            </div>
+          </div>
+          <div className="font-mono text-[9px] text-accent-cool tracking-[0.12em] shrink-0 border border-accent-cool/60 px-2 py-1">
+            HERO · R&D
+          </div>
+        </div>
+
+        <p className="text-sm text-text-secondary leading-relaxed mb-4">
+          Every road, chowk, and pavement intervention Sustainmetric
+          recommends is designed to be delivered by Sustainmetric Pave —
+          the in-house bio-mimetic coating built for Indian heavy traffic,
+          monsoon stormwater, and urban heat island mitigation.
+        </p>
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
+          {[
+            "MMA-PU HYBRID BINDER",
+            "IR-REFLECTIVE CICPs",
+            "POROUS ZEOLITE AGGREGATE",
+            "CALCINED BAUXITE ANTI-SKID",
+            "RETROREFLECTIVE GLASS BEADS",
+            "BIO-MIMETIC DRAIN-TO-ROOTS",
+          ].map((label) => (
+            <div
+              key={label}
+              className="font-mono text-[10px] tracking-[0.06em] text-text-primary/90 border-l border-accent-cool/50 pl-2.5 leading-snug"
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+
+        <a
+          href="/pave"
+          className="inline-flex items-center gap-2 border border-accent-cool/60 px-4 py-2 font-headline text-[10px] uppercase tracking-[0.12em] text-accent-cool hover:bg-accent-cool/10 transition-colors"
+        >
+          VIEW FULL PRODUCT SPEC
+          <span>→</span>
+        </a>
+      </div>
+
+      {/* Skin — secondary */}
+      <a
+        href="/skin"
+        className="block mt-3 border border-border hover:border-accent-cool/40 p-4 transition-colors group"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="font-headline text-xs uppercase tracking-button text-text-primary mb-1">
+              SUSTAINMETRIC SKIN · ROOFTOP VARIANT
+            </div>
+            <div className="text-xs text-text-secondary leading-snug">
+              Potassium silicate bio-mimetic cool roof adhesive for
+              residential, commercial, industrial, and institutional
+              rooftops. Deployed wherever Package A recommends a cool roof.
+            </div>
+          </div>
+          <div className="font-headline text-[10px] uppercase tracking-[0.12em] text-accent-cool group-hover:translate-x-0.5 transition-transform shrink-0">
+            VIEW →
+          </div>
+        </div>
+      </a>
+    </div>
+  );
+}
+
 function ReasoningNarrative({ narrative }: { narrative: string }) {
   const typed = useTypewriter(narrative, 10);
   if (!narrative) return null;
@@ -469,6 +554,9 @@ function GeminiAnalysis({ analysis }: { analysis: SiteAnalysis }) {
         </div>
         <InterventionCards options={analysis.intervention_options} />
       </div>
+
+      {/* Hero product showcase — persistent, shows on every completed analysis */}
+      <HeroProduct />
 
       {/* Recommended bundle */}
       <div className="mb-5">
