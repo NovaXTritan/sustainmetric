@@ -38,6 +38,18 @@ const PACKAGE_LABEL: Record<PackageId, string> = {
   kilometer: "PACKAGE C · ADOPT-A-KILOMETER",
 };
 
+// Persistent attribution of the in-house V2 formulation that would deliver
+// each intervention. Only materials-science interventions get attribution —
+// vegetation interventions (urban_tree, pocket_park, green_wall, water_body)
+// are not coatings and would misrepresent the product line if tagged.
+const PRODUCT_ATTRIBUTION: Record<string, string> = {
+  cool_roof: "DEPLOYED VIA SUSTAINMETRIC SKIN · V2 IN-HOUSE FORMULATION (R&D)",
+  reflective_pavement:
+    "DEPLOYED VIA SUSTAINMETRIC PAVE · V2 IN-HOUSE FORMULATION (R&D)",
+  permeable_pavement:
+    "DEPLOYED VIA SUSTAINMETRIC PAVE · V2 IN-HOUSE FORMULATION (R&D)",
+};
+
 const EQUITY_COLOR: Record<string, string> = {
   HIGH: "text-accent-heat",
   MEDIUM: "text-yellow-400",
@@ -250,7 +262,7 @@ function InterventionCard({
       }`}
     >
       {packageLabel && (
-        <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <div className="inline-block border border-border px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-text-secondary uppercase">
             {packageLabel}
           </div>
@@ -259,6 +271,11 @@ function InterventionCard({
               V2 FORMULATION AVAILABLE
             </div>
           )}
+        </div>
+      )}
+      {PRODUCT_ATTRIBUTION[opt.type] && (
+        <div className="text-[10px] text-white/50 tracking-[0.06em] mb-3 font-body">
+          {PRODUCT_ATTRIBUTION[opt.type]}
         </div>
       )}
       <div className="flex items-start justify-between gap-3 mb-2">
