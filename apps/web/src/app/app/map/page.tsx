@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import AnalysisPanel from "@/components/AnalysisPanel";
 import AboutOverlay from "@/components/AboutOverlay";
+import TierSelector from "@/components/TierSelector";
+import type { Tier } from "@/lib/tier";
 
 // MapLibre must be loaded client-side only (no SSR)
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -23,9 +25,13 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 
 export default function MapPage() {
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [, setTier] = useState<Tier | null>(null);
 
   return (
     <div className="h-screen w-screen bg-bg relative overflow-hidden">
+      {/* Tier selector — shown once on first visit, hides itself afterwards */}
+      <TierSelector onReady={setTier} />
+
       {/* Top nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-bg via-bg/80 to-transparent pointer-events-none">
         <Link
