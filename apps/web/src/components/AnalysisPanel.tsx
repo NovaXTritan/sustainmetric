@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMapStore, type FetchStatus } from "@/lib/store";
 import type { InterventionOption, PackageId, SiteAnalysis } from "@/lib/api";
+import { readTier } from "@/lib/tier";
 import CommitModal from "./CommitModal";
 
 // ── The seven data sources, pre-seeded so rows exist before events arrive ──
@@ -231,6 +232,15 @@ function InterventionCard({
   const label = INTERVENTION_LABELS[opt.type] || opt.type.toUpperCase();
   const packageLabel = opt.package ? PACKAGE_LABEL[opt.package] : null;
 
+  // Corporate tier sees a V2 formulation tag on Package A (Skin) recommendations
+  // since that is where the proprietary road coating R&D pipeline lives.
+  const [showV2Tag, setShowV2Tag] = useState(false);
+  useEffect(() => {
+    if (opt.package === "skin" && readTier() === "corporate") {
+      setShowV2Tag(true);
+    }
+  }, [opt.package]);
+
   return (
     <div
       className={`border p-4 transition-colors duration-rail ease-rail ${
@@ -240,8 +250,15 @@ function InterventionCard({
       }`}
     >
       {packageLabel && (
-        <div className="inline-block border border-border px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-text-secondary uppercase mb-3">
-          {packageLabel}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="inline-block border border-border px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-text-secondary uppercase">
+            {packageLabel}
+          </div>
+          {showV2Tag && (
+            <div className="inline-block border border-accent-cool/40 px-2 py-[3px] font-mono text-[8px] tracking-[0.12em] text-accent-cool uppercase">
+              V2 FORMULATION AVAILABLE
+            </div>
+          )}
         </div>
       )}
       <div className="flex items-start justify-between gap-3 mb-2">
