@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import AnalysisPanel from "@/components/AnalysisPanel";
 import AboutOverlay from "@/components/AboutOverlay";
 import TierSelector from "@/components/TierSelector";
 import SearchBar from "@/components/SearchBar";
+import BrandNav from "@/components/BrandNav";
 import type { Tier } from "@/lib/tier";
 
 // MapLibre must be loaded client-side only (no SSR)
@@ -35,12 +35,7 @@ export default function MapPage() {
 
       {/* Top nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-bg via-bg/80 to-transparent pointer-events-none">
-        <Link
-          href="/"
-          className="font-headline text-xs font-medium uppercase tracking-nav text-text-primary pointer-events-auto hover:text-text-secondary transition-colors duration-rail"
-        >
-          SUSTAINMETRIC
-        </Link>
+        <BrandNav variant="overlay" />
         <div className="flex items-center gap-4 pointer-events-auto">
           <span className="font-mono text-xs text-text-tertiary uppercase">
             CLICK ANYWHERE ON THE MAP TO ANALYZE
