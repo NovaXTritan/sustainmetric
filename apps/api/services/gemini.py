@@ -54,12 +54,16 @@ OUTPUT_SCHEMA = {
                     "equity_score": {"type": "number"},
                     "time_to_impact_months": {"type": "integer"},
                     "rejection_reason": {"type": "string"},
+                    "package": {
+                        "type": "string",
+                        "enum": ["skin", "chowk", "kilometer"],
+                    },
                 },
                 "required": [
                     "type", "description", "estimated_cost_inr",
                     "projected_temperature_reduction_celsius",
                     "equity_score", "time_to_impact_months",
-                    "rejection_reason",
+                    "rejection_reason", "package",
                 ],
             },
         },
@@ -97,7 +101,12 @@ OUTPUT_SCHEMA = {
 }
 
 
-async def analyze_with_gemini(lat: float, lon: float, fetcher_data: dict) -> dict:
+async def analyze_with_gemini(
+    lat: float,
+    lon: float,
+    fetcher_data: dict,
+    tier: str = "corporate",
+) -> dict:
     """Call Gemini with collected data and return structured analysis.
 
     Returns dict with keys: analysis (the parsed JSON), raw (full response), usage.
@@ -115,6 +124,7 @@ async def analyze_with_gemini(lat: float, lon: float, fetcher_data: dict) -> dic
     prompt = template.render(
         lat=lat,
         lon=lon,
+        tier=tier,
         fetcher_data=json.dumps(fetcher_data, indent=2, default=str),
     )
 
@@ -189,14 +199,23 @@ def _placeholder_response(lat: float, lon: float) -> dict:
                     "projected_temperature_reduction_celsius": 3.5,
                     "equity_score": 0.85,
                     "time_to_impact_months": 1,
+                    "rejection_reason": "",
+                    "package": "skin",
                 },
                 {
                     "type": "urban_tree",
-                    "description": "Plant native shade trees (Neem, Peepal) along streets",
+                    "description": (
+                        "Plant native shade trees (Neem, Peepal) along streets"
+                    ),
                     "estimated_cost_inr": 50000,
                     "projected_temperature_reduction_celsius": 2.5,
                     "equity_score": 0.90,
                     "time_to_impact_months": 24,
+                    "rejection_reason": (
+                        "Longer time-to-impact than cool roofs for a site "
+                        "where residents need immediate thermal relief."
+                    ),
+                    "package": "kilometer",
                 },
             ],
             "recommended_bundle": (

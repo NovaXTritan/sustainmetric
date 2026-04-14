@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useMapStore, type FetchStatus } from "@/lib/store";
-import type { InterventionOption, SiteAnalysis } from "@/lib/api";
+import type { InterventionOption, PackageId, SiteAnalysis } from "@/lib/api";
+import CommitModal from "./CommitModal";
 
 // ── The seven data sources, pre-seeded so rows exist before events arrive ──
 interface SourceMeta {
@@ -28,6 +29,12 @@ const INTERVENTION_LABELS: Record<string, string> = {
   reflective_pavement: "REFLECTIVE PAVEMENT",
   water_body: "WATER BODY",
   green_wall: "GREEN WALL",
+};
+
+const PACKAGE_LABEL: Record<PackageId, string> = {
+  skin: "PACKAGE A · THE SKIN",
+  chowk: "PACKAGE B · ADOPT-A-CHOWK",
+  kilometer: "PACKAGE C · ADOPT-A-KILOMETER",
 };
 
 const EQUITY_COLOR: Record<string, string> = {
@@ -213,11 +220,16 @@ function MediaBlock() {
 function InterventionCard({
   opt,
   isTop,
+  optionIndex,
+  onCommit,
 }: {
   opt: InterventionOption;
   isTop: boolean;
+  optionIndex: number;
+  onCommit: (index: number, pkg: PackageId) => void;
 }) {
   const label = INTERVENTION_LABELS[opt.type] || opt.type.toUpperCase();
+  const packageLabel = opt.package ? PACKAGE_LABEL[opt.package] : null;
 
   return (
     <div
@@ -227,6 +239,11 @@ function InterventionCard({
           : "border-border"
       }`}
     >
+      {packageLabel && (
+        <div className="inline-block border border-border px-2.5 py-1 font-mono text-[9px] tracking-[0.12em] text-text-secondary uppercase mb-3">
+          {packageLabel}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div>
           <div className="font-mono text-[9px] text-accent-cool tracking-[0.08em] mb-1">
@@ -272,21 +289,59 @@ function InterventionCard({
           </p>
         </div>
       )}
+
+      {isTop && opt.package && (
+        <div className="mt-4 pt-3 border-t border-border/60">
+          <button
+            onClick={() => onCommit(optionIndex, opt.package as PackageId)}
+            className="w-full border border-accent-cool/60 px-4 py-2.5 font-headline text-[10px] uppercase tracking-[0.12em] text-accent-cool hover:bg-accent-cool/10 transition-colors"
+          >
+            COMMIT FUNDING (DEMO) →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 function InterventionCards({ options }: { options: InterventionOption[] }) {
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    index: number;
+    pkg: PackageId;
+  }>({ open: false, index: 0, pkg: "skin" });
+  const queryId = useMapStore((s) => s.queryId);
+
   if (!options.length) return null;
   const [top, ...rest] = options;
 
   return (
-    <div className="space-y-3 animate-fadeIn">
-      <InterventionCard opt={top} isTop />
-      {rest.map((opt, i) => (
-        <InterventionCard key={i} opt={opt} isTop={false} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-3 animate-fadeIn">
+        <InterventionCard
+          opt={top}
+          isTop
+          optionIndex={0}
+          onCommit={(index, pkg) => setModalState({ open: true, index, pkg })}
+        />
+        {rest.map((opt, i) => (
+          <InterventionCard
+            key={i}
+            opt={opt}
+            isTop={false}
+            optionIndex={i + 1}
+            onCommit={(index, pkg) => setModalState({ open: true, index, pkg })}
+          />
+        ))}
+      </div>
+      <CommitModal
+        open={modalState.open}
+        onClose={() => setModalState((s) => ({ ...s, open: false }))}
+        queryId={queryId}
+        interventionIndex={modalState.index}
+        packageId={modalState.pkg}
+      />
+    </>
   );
 }
 

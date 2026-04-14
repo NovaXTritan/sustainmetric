@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routes import health, me, queries
+from routes import health, me, packages, projects, queries
 
 logger = structlog.get_logger()
 
@@ -69,3 +69,5 @@ async def add_timing_header(request: Request, call_next: object) -> Response:
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(me.router, prefix="/api/v1", tags=["me"])
 app.include_router(queries.router, prefix="/api/v1", tags=["queries"])
+app.include_router(packages.router, prefix="/api/v1", tags=["packages"])
+app.include_router(projects.router, prefix="/api/v1", tags=["projects"])

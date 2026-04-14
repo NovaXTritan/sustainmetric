@@ -35,6 +35,18 @@ class InterventionType(StrEnum):
     GREEN_WALL = "green_wall"
 
 
+class PackageId(StrEnum):
+    SKIN = "skin"
+    CHOWK = "chowk"
+    KILOMETER = "kilometer"
+
+
+class CustomerTier(StrEnum):
+    INDIVIDUAL = "individual"
+    COMMUNITY = "community"
+    CORPORATE = "corporate"
+
+
 # ── Auth / User ───────────────────────────────────────────────
 
 class TenantResponse(BaseModel):
@@ -42,6 +54,7 @@ class TenantResponse(BaseModel):
     name: str
     slug: str
     plan: str
+    tier: str = "corporate"
     monthly_query_quota: int
 
 
@@ -81,6 +94,7 @@ class InterventionOption(BaseModel):
     equity_score: float = Field(ge=0, le=1)
     time_to_impact_months: int
     rejection_reason: str = ""
+    package: PackageId
 
 
 class ProjectedImpactMetrics(BaseModel):
@@ -156,3 +170,50 @@ class StreamEvent(BaseModel):
     source: str | None = None
     data: dict[str, Any] = {}
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# ── Intervention Packages (Block 1) ──────────────────────────
+
+class InterventionPackageResponse(BaseModel):
+    id: str
+    name: str
+    short_description: str
+    full_description: str
+    intervention_types: list[str]
+    cost_per_sqm_min_inr: int
+    cost_per_sqm_max_inr: int
+    typical_timeline_months: int
+    implementation_partner_type: str
+    brsr_principle_6_coverage: list[str]
+    is_proprietary: bool
+    proprietary_notes: str | None = None
+
+
+# ── Tier selection (Block 2) ─────────────────────────────────
+
+class TierUpdateRequest(BaseModel):
+    tier: CustomerTier
+
+
+# ── Commit-funding flow (Block 1) ────────────────────────────
+
+class CommitRequest(BaseModel):
+    query_id: UUID
+    intervention_option_index: int = Field(ge=0, le=9)
+    package_id: PackageId
+    estimated_area_sqm: int = Field(ge=1, le=1_000_000)
+    committed_amount_inr: int = Field(ge=1000, le=1_000_000_000)
+
+
+class CommitResponse(BaseModel):
+    project_id: UUID
+    query_id: UUID
+    package_id: str
+    package_name: str
+    committed_amount_inr: int
+    platform_fee_inr: int
+    execution_partner_amount_inr: int
+    is_demo_commitment: bool
+    brsr_preview: list[str]
+    implementation_partner_type: str
+    created_at: datetime

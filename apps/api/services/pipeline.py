@@ -67,10 +67,25 @@ async def run_fetchers_and_analyze(
     # ── Step 2: Update status to processing ───────────────────
     sb.table("queries").update({"status": "processing"}).eq("id", query_id).execute()
 
-    # ── Step 3: Call Gemini ────────────────────────────────────
+    # ── Step 3: Fetch tenant tier to adapt Gemini narrative voice
+    tier = "corporate"  # safe default matching tenants.tier default
+    try:
+        tenant_row = (
+            sb.table("tenants")
+            .select("tier")
+            .eq("id", tenant_id)
+            .single()
+            .execute()
+        )
+        if tenant_row.data and tenant_row.data.get("tier"):
+            tier = tenant_row.data["tier"]
+    except Exception as e:
+        logger.warning("tenant_tier_fetch_failed", error=str(e), tenant_id=tenant_id)
+
+    # ── Step 4: Call Gemini ────────────────────────────────────
     from services.gemini import analyze_with_gemini
 
-    gemini_result = await analyze_with_gemini(lat, lon, collected_data)
+    gemini_result = await analyze_with_gemini(lat, lon, collected_data, tier=tier)
 
     # ── Step 4: Validate ──────────────────────────────────────
     from services.validation import validate_analysis
